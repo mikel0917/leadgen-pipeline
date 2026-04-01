@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  leadgen-api:
+    build: .
+    container_name: leadgen-api
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./templates:/app/templates
+    depends_on:
+      - db
+
+  n8n:
+    image: n8nio/n8n
+    container_name: leadgen-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${DASHBOARD_PASSWORD}
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows
+
+  db:
+    image: postgres:15-alpine
+    container_name: leadgen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leadgen
+      POSTGRES_USER: leadgen
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-leadgen_local}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  n8n_data:
+  pg_data:
